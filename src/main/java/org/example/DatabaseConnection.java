@@ -6,31 +6,33 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseConnection {
-
     private static final String PROPERTIES_FILE = "application.properties";
-    private static String dbUrl;
-    private static String dbUsername;
-    private static String dbPassword;
-
-    static {
-        try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
-            Properties prop = new Properties();
-            if (input == null) {
-                System.err.println("Sorry, unable to find " + PROPERTIES_FILE);
-            } else {
-                prop.load(input);
-                dbUrl = prop.getProperty("db.url");
-                dbUsername = prop.getProperty("db.username");
-                dbPassword = prop.getProperty("db.password");
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
+    private static final Logger logger = Logger.getLogger(DatabaseConnection.class.getName());
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
+        Properties props = new Properties();
+        try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
+            if (input == null) {
+                throw new RuntimeException("Unable to find " + PROPERTIES_FILE);
+            }
+            props.load(input);
+        } catch (IOException ex) {
+            throw new RuntimeException("Error loading " + PROPERTIES_FILE, ex);
+        }
+
+        String url = props.getProperty("db.url");
+        String username = props.getProperty("db.username");
+        String password = props.getProperty("db.password");
+
+        try {
+            return DriverManager.getConnection(url, username, password);
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Error connecting to database", ex);
+            throw ex;
+        }
     }
 }
